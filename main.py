@@ -81,7 +81,7 @@ def main():
     if len(sys.argv) >= 4:
         precision = int(sys.argv[3])
     else:
-        permission = 3
+        precision = 3
 
     # Read sensors
     sensor1_coords = read_csv_sensor(csv_file)
