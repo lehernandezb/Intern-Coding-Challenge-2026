@@ -77,7 +77,11 @@ def main():
 
     csv_file = sys.argv[1]
     json_file = sys.argv[2]
-    precision = int(sys.argv[3]) if len(sys.argv) >= 4 else 3
+
+    if len(sys.argv) >= 4:
+        precision = int(sys.argv[3])
+    else:
+        permission = 3
 
     # Read sensors
     sensor1_coords = read_csv_sensor(csv_file)
@@ -98,5 +102,6 @@ def main():
     else:
         print("No collisions found.")
 
+# Main
 if __name__ == "__main__":
     main()
