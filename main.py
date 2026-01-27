@@ -1,18 +1,18 @@
 import csv
 import json
-import argparse
 import sys
 
 # Method to read CSV
 def read_csv_sensor(file_path):
-    latitudes, longitudes = [], []
+    latitudes, longitudes, ids = [], [], []
     try:
         with open(file_path, newline="") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 latitudes.append(float(row["latitude"]))
                 longitudes.append(float(row["longitude"]))
-        return list(zip(latitudes, longitudes))
+                ids.append(int(row["id"]))
+        return list(zip(latitudes, longitudes, ids))
     except FileNotFoundError:
         print(f"CSV file not found: {file_path}")
         sys.exit(1)
@@ -23,14 +23,14 @@ def read_csv_sensor(file_path):
         print(f"Missing column in CSV: {e}")
         sys.exit(1)
 
-# Method to read Json
+# Method to read JSON
 def read_json_sensor(file_path):
     try:
         with open(file_path, "r") as f:
             data = json.load(f)
         coords = []
         for row in data:
-            coords.append((float(row["latitude"]), float(row["longitude"])))
+            coords.append((float(row["latitude"]), float(row["longitude"]), int(row["id"])))
         return coords
     except FileNotFoundError:
         print(f"JSON file not found: {file_path}")
@@ -44,45 +44,57 @@ def read_json_sensor(file_path):
 
 # Method to round coords
 def round_coords(coords, precision):
-    return [(round(lat, precision), round(lon, precision)) for lat, lon in coords]
+    return [(round(lat, precision), round(lon, precision), _id) for lat, lon, _id in coords]
 
-# Method to find collisions
+# Method to find collisions (return pairs of IDs)
 def find_collisions(sensor1_coords, sensor2_coords):
-    return set(sensor1_coords).intersection(set(sensor2_coords))
+
+    # Map coordinates to IDs for sensor1
+    coord_to_ids1 = {}
+    for lat, lon, _id in sensor1_coords:
+        key = (lat, lon)
+        if key not in coord_to_ids1:
+            coord_to_ids1[key] = []
+        coord_to_ids1[key].append(_id)
+    
+    collisions = []
+    
+    # Iterate sensor2 and check for collisions
+    for lat, lon, id2 in sensor2_coords:
+        key = (lat, lon)
+        if key in coord_to_ids1:
+            for id1 in coord_to_ids1[key]:
+                collisions.append((id1, id2))
+    
+    return collisions
 
 # Main
 def main():
 
-    # Read args
     if len(sys.argv) < 3:
         print("Usage: python script.py <CSV_file> <JSON_file> [precision]")
         sys.exit(1)
 
     csv_file = sys.argv[1]
     json_file = sys.argv[2]
+    precision = int(sys.argv[3]) if len(sys.argv) >= 4 else 3
 
-    # Optional rounding precision
-    if len(sys.argv) >= 4:
-        precision = int(sys.argv[3])
-    else:
-        precision = 3
-
-    # Read
+    # Read sensors
     sensor1_coords = read_csv_sensor(csv_file)
     sensor2_coords = read_json_sensor(json_file)
 
-    # Round 
+    # Round coordinates
     sensor1_coords = round_coords(sensor1_coords, precision)
     sensor2_coords = round_coords(sensor2_coords, precision)
 
     # Find collisions
     collisions = find_collisions(sensor1_coords, sensor2_coords)
 
-    #Print
+    # Print results
     if collisions:
         print(f"Found {len(collisions)} collisions:")
-        for lat, lon in collisions:
-            print(f"Latitude: {lat}, Longitude: {lon}")
+        for id1, id2 in collisions:
+            print(f"Sensor 1 ID: {id1}, Sensor 2 ID: {id2}")
     else:
         print("No collisions found.")
 
